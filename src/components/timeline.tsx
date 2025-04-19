@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import styled from "styled-components";
 import { db } from "../firebase";
-import { collection, getDocs, orderBy, query } from "firebase/firestore";
+import { collection, onSnapshot, orderBy, query } from "firebase/firestore";
 import Post from "./post";
+import { Unsubscribe } from "firebase/auth";
 
 export interface IPost {
     id: string;
@@ -21,27 +22,37 @@ const TimelineWrapper = styled.div`
 
 export default function Timeline() {
     const [posts, setPost] = useState<IPost[]>([]);
-    const fetchPost = async () => {
-        const postsQuery = query(
-            collection(db, "posts"),
-            orderBy("createdAt", "desc")
-        );
-        const snapshot = await getDocs(postsQuery);
-        const newPosts = snapshot.docs.map((doc) => {
-            const { post, createdAt, userId, username, photo } = doc.data();
-            return {
-                post,
-                createdAt,
-                userId,
-                username,
-                photo,
-                id: doc.id,
-            };
-        });
-        setPost(newPosts);
-    };
+
     useEffect(() => {
+        let unsubscribe: () => void; 
+        const fetchPost = () => {
+            const postsQuery = query(
+                collection(db, "posts"),
+                orderBy("createdAt", "desc")
+            );
+    
+            unsubscribe = onSnapshot(postsQuery, (snapshot) => { //유저가 사용하지 않을 때 고 listening 할 필요가 없음, onsubscribe
+                const posts = snapshot.docs.map((doc) => {
+                    const { post, createdAt, userId, username, photo } = doc.data();
+                    return {
+                        post,
+                        createdAt,
+                        userId,
+                        username,
+                        photo,
+                        id: doc.id,
+                    };
+                });
+                setPost(posts);
+            });
+            
+        };
         fetchPost();
+        return () => {
+            if (unsubscribe) {
+                unsubscribe();
+            }
+        }
     }, []);
 
     return (

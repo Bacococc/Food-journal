@@ -107,15 +107,16 @@ const ImagePreviewContainer = styled.div`
   position: relative;
   width: 100%;
   img {
+    height:300px;
     width: 100%;
     aspect-ratio: 4 / 3;
     object-fit: cover;
     width: 600px;
+    object-fit: contain;
   }
   .placeholder {
     height: 300px;
     width: 100%;
-    aspect-ratio: 4 / 3;
     background-color: #eaeaea;
   }
   button {
@@ -206,7 +207,7 @@ export default function PostForm() {
       if (file) {
         const locationRef = ref(
           storage,
-          `posts/${user.uid}/${user.displayName}/${doc.id}`
+          `posts/${user.uid}/${doc.id}` //사진 저장, post id 와 같은 이름으로 저장됨
         );
         const result = await uploadBytes(locationRef, file);
         const url = await getDownloadURL(result.ref);

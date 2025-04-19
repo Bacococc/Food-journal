@@ -12,10 +12,6 @@ const Wrapper = styled.div`
     overflow-y: auto; /* 내용이 넘칠 경우 스크롤 */
 `;
 
-const TimelineContainer = styled.div`
-    /* Timeline 컴포넌트가 그리드 영역을 차지하도록 설정 (자동 배치) */
-`;
-
 export default function Home(){
     return (
         <Wrapper>

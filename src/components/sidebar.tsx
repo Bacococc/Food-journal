@@ -3,15 +3,16 @@ import styled from "styled-components";
 import { auth } from "../firebase";
 
 const Container = styled.div`
+    display: flex;
 
 `;
 
 const OutletWrapper = styled.div`
-flex: 1;
+  flex: 1;
   padding: 50px;
-  margin-left: 10%; /* 사이드바 너비만큼 */
+  margin-left: 10%; 
   overflow-y: auto;
-`;
+`; 
 
 const Wrapper = styled.div`
   background-color: white;

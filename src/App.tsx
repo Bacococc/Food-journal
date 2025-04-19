@@ -31,6 +31,10 @@ const router = createBrowserRouter([
       path : "profile",
       element : <Profile />
     },
+    {
+      path : "/post",
+      element : <PostForm />
+    },
   ],
   },
   {
@@ -45,10 +49,6 @@ const router = createBrowserRouter([
     path : "/reset-password", 
     element : <ResetPassword />
   }, 
-  {
-    path : "/post",
-    element : <PostForm />
-  },
 ]);
 
 const GlobalStyles = createGlobalStyle`
