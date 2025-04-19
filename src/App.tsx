@@ -12,6 +12,7 @@ import { auth } from "./firebase";
 import ProtectedRoute from "./components/protected-route";
 import ResetPassword from "./routes/reset-password";
 import PostForm from "./components/post-form";
+import Timeline from "./components/timeline";
 
 const router = createBrowserRouter([
   {

@@ -2,11 +2,18 @@ import styled from "styled-components";
 import Timeline from "../components/timeline";
 
 const Wrapper = styled.div`
-    display: flex; /* flexbox 레이아웃 사용 */
-    margin-left: 10%; /* Sidebar 너비만큼 왼쪽 마진을 줘서 내용이 가려지지 않게 함 */
-    width: 90%; /* 남은 너비를 차지하도록 설정 */
-    padding: 20px; /* 내용 주변에 약간의 패딩 추가 */
-    overflow-y: auto; /* 내용이 넘칠 경우 스크롤 가능하도록 설정 */
+    margin-left: 10%; /* Sidebar 너비만큼 왼쪽 마진 */
+    width: 90%; /* 남은 너비 차지 */
+    padding: 20px;
+    display: grid;
+    grid-template-columns: 1fr; /* 하나의 컬럼 */
+    grid-template-rows: auto; /* 높이를 내용에 따라 자동 조정 */
+    gap: 20px; /* 요소 사이 간격 */
+    overflow-y: auto; /* 내용이 넘칠 경우 스크롤 */
+`;
+
+const TimelineContainer = styled.div`
+    /* Timeline 컴포넌트가 그리드 영역을 차지하도록 설정 (자동 배치) */
 `;
 
 export default function Home(){
