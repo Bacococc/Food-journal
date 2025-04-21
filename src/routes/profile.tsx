@@ -1,80 +1,126 @@
-import React, { useState, useEffect } from "react";
-import { auth, storage } from "../firebase"; 
 import styled from "styled-components";
-import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
-import { updateProfile } from "firebase/auth";
+import { useState, useEffect } from "react";
+import { auth } from "../firebase";
+import { useNavigate } from "react-router-dom";
+import { collection, getDocs, query, where, orderBy } from "firebase/firestore";
+import { db } from "../firebase"; // db 객체 import
+import Post from "../components/Post"; // Post 컴포넌트 임포트
 
-const Wrapper = styled.div`
+// 우측 메인 콘텐츠 영역
+const MainContent = styled.div`
+    flex: 1;
+    padding: 40px;
     display: flex;
-    align-items: center;
     flex-direction: column;
-    gap: 20px
+    align-items: center;
+    width: 100%;
+    max-width: 960px;
+    margin: 0 auto;
 `;
 
-const AvatarUpload = styled.label`
-    width: 80px;
-    overflow: hidden;
-    height: 80px;
+const AvatarLarge = styled.div`
+    width: 120px;
+    height: 120px;
     border-radius: 50%;
-    background-color: aliceblue;
-    cursor: pointer;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    svg{
-        width: 50px;
+    background-color: #ccc;
+    overflow: hidden;
+    margin-bottom: 20px;
+    img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
     }
 `;
 
-const AvatarImg = styled.img`
-    width: 100%;
-`;
-const AvatarInput = styled.input`
-    display: none;
-`;
-const Name = styled.span`
-    font-size: 30px;
+const Username = styled.h2`
+    font-size: 24px;
+    margin-bottom: 10px;
 `;
 
-export default function Profile() {
+const Bio = styled.p`
+    color: #555;
+    text-align: center;
+    margin-bottom: 20px;
+`;
+
+const EditProfileButton = styled.button`
+    background-color: #007bff;
+    color: #fff;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-bottom: 30px;
+`;
+
+const PostsGrid = styled.div`
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    width: 100%;
+`;
+
+interface IPostData {
+    id: string;
+    post: string;
+    createdAt: number;
+    photo?: string;
+}
+
+export default function MyPage() {
     const user = auth.currentUser;
-    const [avatar, setAvatar] = useState(user?.photoURL);
+    const navigate = useNavigate();
+    const [profileImage, setProfileImage] = useState(user?.photoURL);
+    const [displayName, setDisplayName] = useState(user?.displayName || "Anonymous");
+    const [posts, setPosts] = useState<IPostData[]>([]);
 
     useEffect(() => {
         if (user) {
-            setAvatar(user.photoURL);
+            setProfileImage(user.photoURL);
+            setDisplayName(user.displayName || "Anonymous");
+            fetchPosts();
         }
     }, [user]);
 
-    const onAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const { files } = e.target;
-        if (files && files.length === 1 && user) {
-            const file = files[0];
-            const locationRef = ref(storage, `avatars/${user.uid}`);
-            const result = await uploadBytes(locationRef, file);
-            const avatarUrl = await getDownloadURL(result.ref);
-            setAvatar(avatarUrl);
-            await updateProfile(user, {
-                photoURL: avatarUrl,
-            });
-        }
+    const fetchPosts = async () => {
+        if (!user?.uid) return;
+        const postQuery = query(
+            collection(db, "posts"),
+            where("userId", "==", user.uid),
+            orderBy("createdAt", "desc")
+        );
+        const snapshot = await getDocs(postQuery);
+        const fetchedPosts = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+        })) as IPostData[];
+        setPosts(fetchedPosts);
     };
 
-    return(
-    <Wrapper>
-        <AvatarUpload htmlFor="avatar">
-            {avatar ? ( 
-                <AvatarImg src={avatar} alt="avatar" /> 
-            ) : (
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M17.982 18.725A7.488 7.488 0 0 0 12 15.75a7.488 7.488 0 0 0-5.982 2.975m11.963 0a9 9 0 1 0-11.963 0m11.963 0A8.966 8.966 0 0 1 12 21a8.966 8.966 0 0 1-5.982-2.275M15 9.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
-                </svg>
-            )}
-        </AvatarUpload>
-        <AvatarInput onChange={onAvatarChange} id="avatar" type="file" accept="image/*" />
-        <Name>
-            {user?.displayName ?? "Anonymous"}
-        </Name>
-    </Wrapper>
-    )
+    const handleEditProfileClick = () => {
+        navigate("/edit-profile");
+    };
+
+    return (
+        <MainContent>
+            <AvatarLarge>
+                {profileImage && <img src={profileImage} alt="Large Avatar" />}
+            </AvatarLarge>
+            <Username>{displayName}</Username>
+            <Bio>This is Baco's home page! I love to cooking with various coussins!</Bio>
+            <EditProfileButton onClick={handleEditProfileClick}>Edit profile</EditProfileButton>
+            <PostsGrid>
+                {posts.map(postData => (
+                    <Post
+                        key={postData.id}
+                        id={postData.id}
+                        username={displayName} // 프로필 페이지에서는 현재 유저의 이름 사용
+                        photo={postData.photo}
+                        post={postData.post}
+                        userId={user?.uid || ""} // 현재 유저의 uid 전달
+                    />
+                ))}
+            </PostsGrid>
+        </MainContent>
+    );
 }

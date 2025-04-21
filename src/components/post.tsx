@@ -3,7 +3,7 @@ import { auth, db, storage } from "../firebase";
 import { IPost } from "./timeline";
 import styled from "styled-components";
 import { deleteObject, ref } from "firebase/storage";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react"; // useRef 및 useEffect 추가
 
 const ModalOverlay = styled.div`
   position: fixed;
@@ -46,17 +46,23 @@ const ModalButton = styled.button`
 const Wrapper = styled.div`
   display: flex;
   flex-direction: column;
-  border: 1px solid #e0e0e0;
   background-color: white;
-  margin-bottom: 15px;
-  max-height: 600px; /* 포스트의 최대 높이 제한 (조정 가능) */
-  overflow: hidden; /* 내용이 최대 높이를 넘어가면 숨김 */
+  margin-bottom: 20px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* 그림자 효과 */
+  border-radius: 5px;
+  border: 10px solid white; /* 흰색 테두리 */
+  max-width: 400px; /* 너비 제한 */
+  position: relative; /* 옵션 메뉴 위치 기준점 */
 `;
 
 const ImageContainer = styled.div`
   width: 100%;
-  aspect-ratio: 4 / 5;
+  aspect-ratio: 4 / 5; /* 이미지 비율 유지 */
   overflow: hidden;
+  background-color: #f9f9f9; /* 이미지 없을 때 배경색 */
+  display: flex;
+  justify-content: center;
+  align-items: center;
 `;
 
 const Photo = styled.img`
@@ -66,75 +72,98 @@ const Photo = styled.img`
 `;
 
 const TextContainer = styled.div`
-  padding: 10px 15px;
+  padding: 15px;
+  display: flex;
+  flex-direction: column; /* 사용자 정보와 글 내용을 세로로 배치 */
+  align-items: flex-start;
+`;
+
+const UserInfo = styled.div`
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px; /* 사용자 정보와 글 내용 간 간격 */
 `;
 
 const Username = styled.span`
   font-weight: bold;
-  font-size: 14px; /* 폰트 크기 줄임 */
+  font-size: 14px;
   margin-right: 8px;
 `;
 
 const Payload = styled.p`
-  font-size: 12px; /* 폰트 크기 줄임 */
+  font-size: 12px;
   color: #333;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  margin-top: 5px;
+  white-space: pre-wrap; /* 줄바꿈 유지 */
+  overflow-wrap: break-word; /* 긴 단어 줄바꿈 */
+  margin-top: 0; /* Username과의 간격 조절 */
 `;
 
-const DeleteBtn = styled.button`
-  background-color: tomato;
-  color: white;
-  font-weight: 600;
-  border: 0;
-  font-size: 12px;
-  padding: 5px 10px;
-  text-transform: uppercase;
+const MoreButton = styled.button`
+  background: none;
+  border: none;
   cursor: pointer;
+  font-size: 16px;
+  padding: 5px;
+  color: #777;
+  margin-left: auto; /* TextContainer 끝으로 이동 */
 `;
 
-const EditBtn = styled.button`
-  background-color: #bebebe;
+const OptionsMenu = styled.div`
+  position: absolute;
+  bottom: 5px;
+  left: 5px;
+  background-color: rgba(0, 0, 0, 0.7);
+  border-radius: 3px;
+  display: flex;
+  gap: 5px;
+  padding: 5px;
+  z-index: 10; /* 다른 요소 위에 표시 */
+`;
+
+const OptionButton = styled.button`
+  background: none;
+  border: none;
   color: white;
-  font-weight: 600;
-  border: 0;
   font-size: 12px;
-  padding: 5px 10px;
-  text-transform: uppercase;
   cursor: pointer;
+  padding: 5px 8px;
+  border-radius: 3px;
+  &:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+  }
 `;
 
 export default function Post({ username, photo, post, userId, id }: IPost) {
   const user = auth.currentUser;
   const [showEditModal, setShowEditModal] = useState(false);
   const [newPostText, setNewPostText] = useState(post);
+  const [showOptions, setShowOptions] = useState(false);
+  const optionsRef = useRef<HTMLDivElement>(null);
+
   const onDelete = async () => {
     const ok = confirm("Are you sure you want to delete this post?");
-
-    if(!ok || user?.uid !== userId) return;
+    if (!ok || user?.uid !== userId) return;
     try {
-      await deleteDoc(doc(db, "posts", id)); //firebase db에서 - posts 컬랙션의 doc, id 를 받음
-      if(photo){
+      await deleteDoc(doc(db, "posts", id));
+      if (photo) {
         const photoRef = ref(storage, `posts/${user.uid}/${id}`);
         await deleteObject(photoRef);
       }
-    } catch(e) {
-      console.log(e)
+    } catch (e) {
+      console.log(e);
     } finally {
-      //
+      setShowOptions(false);
     }
-  }
+  };
 
   const onEdit = () => {
     if (user?.uid !== userId) return;
     setShowEditModal(true);
+    setShowOptions(false);
   };
 
   const handleSaveEdit = async () => {
     if (newPostText.trim() === "") return;
-
     const postRef = doc(db, "posts", id);
     try {
       await updateDoc(postRef, {
@@ -145,20 +174,53 @@ export default function Post({ username, photo, post, userId, id }: IPost) {
       console.log(e);
     }
   };
-  
+
+  const toggleOptions = () => {
+    setShowOptions(!showOptions);
+  };
+
+  // 옵션 메뉴 외부 클릭 시 닫기
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (optionsRef.current && !optionsRef.current.contains(event.target as Node) && event.target !== moreButtonRef.current) {
+        setShowOptions(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [optionsRef, showOptions]);
+
+  const moreButtonRef = useRef<HTMLButtonElement>(null);
+
   return (
     <Wrapper>
-      {photo && (
-        <ImageContainer>
+      <ImageContainer>
+        {photo ? (
           <Photo src={photo} alt="post image" />
-        </ImageContainer>
-      )}
+        ) : (
+          <div>No Image</div>
+        )}
+      </ImageContainer>
       <TextContainer>
-        <Username>{username}</Username>
-        <Payload>{post}</Payload>
-        {user?.uid === userId ? <DeleteBtn onClick={onDelete}>🗑️</DeleteBtn> : null}
-        {user?.uid === userId ? <EditBtn onClick={onEdit}>✏️</EditBtn> : null}
+        <UserInfo>
+          <Username>{username}</Username>
+          <Payload>{post}</Payload>
+        </UserInfo>
+        {user?.uid === userId && (
+          <MoreButton onClick={toggleOptions} ref={moreButtonRef}>
+            ...
+          </MoreButton>
+        )}
       </TextContainer>
+      {showOptions && user?.uid === userId && (
+        <OptionsMenu ref={optionsRef}>
+          <OptionButton onClick={onDelete}>삭제</OptionButton>
+          <OptionButton onClick={onEdit}>수정</OptionButton>
+        </OptionsMenu>
+      )}
       {showEditModal && (
         <ModalOverlay>
           <ModalContent>

@@ -1,18 +1,18 @@
 import { Link, Outlet, useNavigate } from "react-router-dom";
 import styled from "styled-components";
 import { auth } from "../firebase";
+import { useState, useEffect } from "react";
 
 const Container = styled.div`
     display: flex;
-
 `;
 
 const OutletWrapper = styled.div`
   flex: 1;
   padding: 50px;
-  margin-left: 10%; 
+  margin-left: 10%;
   overflow-y: auto;
-`; 
+`;
 
 const Wrapper = styled.div`
   background-color: white;
@@ -49,6 +49,14 @@ const MenuItem = styled.div`
     height: 50px;
     width: 50px;
     border-radius: 50%;
+    &.profile-item { /* 프로필 사진 아이템에만 overflow 적용 */
+        overflow: hidden;
+        img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+    }
     svg {
         width: 30px;
         height: 30px;
@@ -58,32 +66,53 @@ const MenuItem = styled.div`
     }
 `;
 
-
-
+const LogoItem = styled(MenuItem)` /* Food Journal 로고를 위한 스타일 */
+    overflow: visible; /* 넘치는 내용 보이도록 */
+    border-radius: 0; /* 원형 테두리 제거 */
+    border: none; /* 테두리 제거 */
+    height: auto;
+    width: auto;
+    font-size: 16px;
+    font-weight: bold;
+`;
 
 export default function Sidebar() {
     const navigate = useNavigate();
-    const onLogout = async() => {
-        const ok = confirm("Are you sure you want to log out?")
-        if(ok){
-            await auth.signOut();
-            navigate("/login")
+    const user = auth.currentUser;
+    const [profilePhotoURL, setProfilePhotoURL] = useState<string | null>(user?.photoURL || null);
+
+    useEffect(() => {
+        if (user?.photoURL) {
+            setProfilePhotoURL(user.photoURL);
         }
-    }
+    }, [user]);
+
+    const onLogout = async () => {
+        const ok = confirm("Are you sure you want to log out?");
+        if (ok) {
+            await auth.signOut();
+            navigate("/login");
+        }
+    };
+
     return (
         <Container>
             <Wrapper>
                 <Menu>
                     <StyledLink to="/">
-                        <MenuItem>
+                        <LogoItem>
                             <div>Food Journal</div>
-                        </MenuItem>
+                        </LogoItem>
                     </StyledLink>
-                    <StyledLink to="/mypage">
-                            <MenuItem>
+                    <StyledLink to="/profile">
+                        <MenuItem className="profile-item">
+                            {profilePhotoURL ? (
+                                <img src={profilePhotoURL} alt="Profile" />
+                            ) : (
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M17.982 18.725A7.488 7.488 0 0 0 12 15.75a7.488 7.488 0 0 0-5.982 2.975m11.963 0a9 9 0 1 0-11.963 0m11.963 0A8.966 8.966 0 0 1 12 21a8.966 8.966 0 0 1-5.982-2.275M15 9.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
                                 </svg>
+                            )}
                         </MenuItem>
                     </StyledLink>
                     <StyledLink to="/post">
@@ -107,6 +136,5 @@ export default function Sidebar() {
                 <Outlet />
             </OutletWrapper>
         </Container>
-        
     );
 }
